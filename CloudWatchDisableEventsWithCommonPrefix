@@ -1,0 +1,23 @@
+@Library('github.com/releaseworks/jenkinslib') _
+
+node {
+  stage("cloudwatch rule enable") {
+    script{
+        AWS_ACCOUNT_ID = sh (
+            script: "aws sts get-caller-identity |grep Account |awk '{print \$2}' |sed 's/\"//g' |sed 's/,//g'",
+            returnStdout: true
+            ).trim()
+
+        ruleInfo = sh (
+            script: 'aws events list-rules --region=us-east-1 --name-prefix "prod-events-"',
+            returnStdout: true
+        ).trim()
+
+        ruleJSON = readJSON text: ruleInfo
+        ruleJSON.Rules.each { instance ->
+            echo "${instance.Name} : ${instance.State}"
+            sh "aws events disable-rule --region=us-east-1 --name=${instance.Name}"
+        }
+    }
+  }
+}
